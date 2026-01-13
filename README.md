@@ -248,6 +248,7 @@ softmax-confidence-meter/
 │   └── UI_SPEC.md      # UI仕様書
 ├── assets/             # 画像リソース
 │   └── screenshot.png  # スクリーンショット
+├── .nojekyll           # Jekyll処理無効化
 ├── CLAUDE.md           # Claude Code用ガイド
 ├── LICENSE             # ライセンスファイル
 └── README.md           # 本ドキュメント
