@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <title>Softmax Confidence Meter</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Softmax Confidence Meter</h1>
+    <p class="subtitle">確率分布から「信じてよいか」を測定</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="basics">softmax基礎</button>
+    <button class="tab-btn" data-tab="meter">Confidence Meter</button>
+    <button class="tab-btn" data-tab="related">関連ツール・発展</button>
+  </nav>
+
+  <main>
+    <!-- Tab 1: softmax基礎 -->
+    <section id="basics" class="tab-content active">
+      <div class="accordion">
+        <div class="accordion-item active">
+          <button class="accordion-header">
+            <span>softmaxとは何か</span>
+            <span class="accordion-icon">▼</span>
+          </button>
+          <div class="accordion-body">
+            <div class="softmax-intro">
+              <p><strong>softmax</strong> は、複数の候補に付けられた「スコア」を「確率」に変換する関数です。</p>
+              <div class="softmax-key-points">
+                <div class="key-point">
+                  <span class="key-icon">🔢</span>
+                  <span>入力スコアは任意の値でOK（合計が1や100である必要なし）</span>
+                </div>
+                <div class="key-point">
+                  <span class="key-icon">📊</span>
+                  <span>出力の確率は必ず合計 100% になる</span>
+                </div>
+                <div class="key-point">
+                  <span class="key-icon">📈</span>
+                  <span>スコアが高いほど確率も高くなる</span>
+                </div>
+                <div class="key-point">
+                  <span class="key-icon">⚖️</span>
+                  <span>他の候補との相対比較で確率が決まる</span>
+                </div>
+              </div>
+            </div>
+            <div class="demo-softmax-basic">
+              <div class="demo-example-title">例：3つの候補のスコアを確率に変換</div>
+              <div class="demo-row">
+                <span class="demo-label">入力スコア:</span>
+                <div class="demo-values">
+                  <span class="score-chip">A: 3.0</span>
+                  <span class="score-chip">B: 1.0</span>
+                  <span class="score-chip">C: 0.5</span>
+                </div>
+              </div>
+              <div class="demo-arrow">↓ softmax変換</div>
+              <div class="chart-container" id="chart-basic"></div>
+              <p class="demo-note">スコア差が大きいほど、確率の差も広がります。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-header">
+            <span>温度（Temperature）</span>
+            <span class="accordion-icon">▼</span>
+          </button>
+          <div class="accordion-body">
+            <p>温度パラメータで分布の「鋭さ」を調整できます。スライダーを動かして変化を確認しましょう。</p>
+            <div class="demo-temperature">
+              <div class="temp-slider-demo">
+                <label>
+                  <span class="temp-icon">🌡️</span>
+                  温度: <span id="demo-temp-value" class="temp-display">1.0</span>
+                </label>
+                <input type="range" id="demo-temp-slider" min="0.1" max="3.0" step="0.1" value="1.0">
+                <div class="temp-scale">
+                  <span>0.1（鋭い）</span>
+                  <span>3.0（平坦）</span>
+                </div>
+              </div>
+              <div class="temp-interactive">
+                <div class="temp-status" id="temp-status">標準的な分布</div>
+                <div class="chart-container" id="chart-temp-interactive"></div>
+                <div class="temp-confidence">
+                  自信度: <span id="demo-confidence">--</span>%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-header">
+            <span>分布の形（団子／独走）</span>
+            <span class="accordion-icon">▼</span>
+          </button>
+          <div class="accordion-body">
+            <p>確率分布の形が判断の手がかりになります。</p>
+            <div class="distribution-comparison">
+              <div class="dist-example">
+                <div class="dist-label">🏃 独走型（Dominant）</div>
+                <div class="dist-desc">1つが突出 → 自信を持てる</div>
+                <div class="chart-container" id="chart-solo"></div>
+              </div>
+              <div class="dist-example">
+                <div class="dist-label">🍡 団子型（Uniform）</div>
+                <div class="dist-desc">複数が拮抗 → 判断困難</div>
+                <div class="chart-container" id="chart-dango"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-header">
+            <span>よくある誤解</span>
+            <span class="accordion-icon">▼</span>
+          </button>
+          <div class="accordion-body">
+            <div class="misconceptions">
+              <div class="misconception">
+                <div class="misconception-wrong">✗ 「確率80%なら正しい」</div>
+                <div class="misconception-right">○ softmax出力は相対的な比率であり、絶対的な正解確率ではない</div>
+              </div>
+              <div class="misconception">
+                <div class="misconception-wrong">✗ 「1位を選べば安全」</div>
+                <div class="misconception-right">○ 2位との差が小さければ、どちらも同程度に妥当</div>
+              </div>
+              <div class="misconception">
+                <div class="misconception-wrong">✗ 「スコアが高い＝確率が高い」</div>
+                <div class="misconception-right">○ softmaxは相対比較。他のスコア次第で確率は変わる</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Confidence Meter -->
+    <section id="meter" class="tab-content">
+      <div class="meter-container">
+        <div class="input-section">
+          <h2>候補とスコアを入力</h2>
+          <div class="input-format-hint">
+            <div class="format-title">書式（1行に1候補）</div>
+            <code>スコア</code> または <code>候補名:スコア</code>
+          </div>
+          <textarea id="candidate-input" class="candidate-textarea" rows="5" placeholder="候補A:3.5
+候補B:2.1
+候補C:1.8
+候補D:0.5"></textarea>
+          <div class="input-actions">
+            <div class="sample-buttons">
+              <button class="sample-btn" data-sample="dominant">完全独走</button>
+              <button class="sample-btn" data-sample="basic">やや優勢</button>
+              <button class="sample-btn" data-sample="close">僅差</button>
+              <button class="sample-btn" data-sample="scores">候補名なし、スコア値のみ</button>
+            </div>
+            <button id="clear-btn" class="clear-btn">クリア</button>
+          </div>
+          <div class="input-error" id="input-error"></div>
+
+          <div class="temperature-control">
+            <label>
+              温度: <span id="temp-value">1.0</span>
+              <input type="range" id="temp-slider" min="0.1" max="5.0" step="0.1" value="1.0">
+            </label>
+            <div class="temp-hint">低温=鋭い分布　高温=平坦な分布</div>
+          </div>
+
+          <button id="calculate-btn" class="calculate-btn">計算</button>
+        </div>
+
+        <div class="result-section" id="result-section">
+          <div class="result-empty" id="result-empty">
+            <div class="empty-icon">📊</div>
+            <div class="empty-text">スコアを入力すると結果が表示されます</div>
+            <div class="empty-hint">サンプルボタンで試してみましょう</div>
+          </div>
+          <div class="result-content" id="result-content" style="display: none;">
+            <div class="confidence-meter-display">
+              <h2>自信度メーター</h2>
+              <div class="meter-gauge">
+                <div class="meter-fill" id="meter-fill"></div>
+                <div class="meter-labels">
+                  <span>0%</span>
+                  <span>40%</span>
+                  <span>70%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+              <div class="confidence-value" id="confidence-value">--%</div>
+              <div class="confidence-label" id="confidence-label"></div>
+              <div class="confidence-reason" id="confidence-reason"></div>
+            </div>
+
+            <div class="probability-chart">
+              <h2>確率分布（上位5件）</h2>
+              <div class="chart-container" id="chart-result"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: 関連ツール・発展 -->
+    <section id="related" class="tab-content">
+      <h2>関連ツール・発展</h2>
+      <div class="related-tools">
+        <div class="related-tool-item">
+          <div class="related-tool-header">
+            <div class="link-card">
+              <div class="link-card-icon">🔐</div>
+              <div class="link-card-content">
+                <div class="link-card-title">Token Entropy Estimator</div>
+              </div>
+            </div>
+          </div>
+          <div class="related-tool-desc">
+            <p>Softmax Confidence Meter では、候補スコアを softmax によって確率分布へ変換し、その分布の「尖り具合」から自信度を測定しています。</p>
+            <p>このとき、分布の尖り具合は<strong>エントロピー（不確実性）</strong>としても解釈できます。</p>
+            <p>Token Entropy Estimator は、文字列やトークン列そのもののエントロピーを可視化するツールです。</p>
+            <p class="highlight">「結果の分布がどれだけはっきりしているか」を見る本ツールに対し、「入力データ自体がどれだけ秩序立っているか」を見るのがこのツールの役割です。</p>
+          </div>
+          <div class="related-tool-links">
+            <a href="https://github.com/ipusiron/token-entropy-estimator" target="_blank" rel="noopener noreferrer" class="tool-link-btn">📂 GitHubを見る</a>
+            <a href="https://ipusiron.github.io/token-entropy-estimator/" target="_blank" rel="noopener noreferrer" class="tool-link-btn">🚀 ツールを開く</a>
+          </div>
+        </div>
+
+        <div class="related-tool-item">
+          <div class="related-tool-header">
+            <div class="link-card">
+              <div class="link-card-icon">📐</div>
+              <div class="link-card-content">
+                <div class="link-card-title">InfoQuantity Academy</div>
+              </div>
+            </div>
+          </div>
+          <div class="related-tool-desc">
+            <p>Softmax Confidence Meter が扱っている「自信度」「分布の尖り」「判断のしやすさ」は、情報量やエントロピーといった<strong>情報理論の考え方</strong>と深く関係しています。</p>
+            <p>InfoQuantity Academy は、これらの概念を数式ではなく図解と直感で理解するための学習用ツールです。</p>
+            <p class="highlight">softmax の挙動や自信度の意味をもう一段深く理解したい場合に、理論的な背景を補完する役割を持っています。</p>
+          </div>
+          <div class="related-tool-links">
+            <a href="https://github.com/ipusiron/infoquantity-academy" target="_blank" rel="noopener noreferrer" class="tool-link-btn">📂 GitHubを見る</a>
+            <a href="https://ipusiron.github.io/infoquantity-academy/" target="_blank" rel="noopener noreferrer" class="tool-link-btn">🚀 ツールを開く</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer">
+      🔗 GitHubリポジトリはこちら（
+      <a href="https://github.com/ipusiron/softmax-confidence-meter" target="_blank" rel="noopener noreferrer">
+        ipusiron/softmax-confidence-meter
+      </a>
+      ）
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
