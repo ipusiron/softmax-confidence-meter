@@ -11,7 +11,7 @@ This repository contains Day111, Softmax Confidence Meter, a dependency-free sta
 
 ## Architecture
 
-- `js/core.js`: strict parser and DOM-independent numerical functions; classic-script and CommonJS compatible
+- `js/core.js`: strict parser and DOM-independent numerical and comparison functions; classic-script and CommonJS compatible
 - `js/i18n.js`: complete Japanese/English dictionaries and optional language preference
 - `js/main.js`: tabs, disclosures, input state, and DOM rendering
 - `css/style.css`: mobile-first layout
@@ -24,10 +24,11 @@ The application must continue to work when `index.html` is opened through `file:
 
 - Accept 2–200 candidates and finite decimal/scientific scores only.
 - Use `exp((score - maxScore) / temperature)` for numerical stability.
-- Temperature must be finite and greater than zero; the UI range is 0.10–5.00.
+- Temperature must be finite and greater than zero; the meter UI range is 0.10–5.00 and the comparison-lab range is 0.1–10.0.
 - Concentration is `1 - H(p) / log(n)` with natural logarithms.
 - Preserve source order for exact ties.
 - Report omitted count and tail probability whenever the top-five view omits candidates.
+- Compare named candidates by identity even if their input order differs. Treat candidate-set changes as redistribution, not as a directly comparable before-and-after result.
 
 ## Security and accessibility
 

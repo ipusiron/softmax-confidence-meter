@@ -7,7 +7,8 @@ const {
   parseCandidateInput,
   softmax,
   entropy,
-  analyzeCandidates
+  analyzeCandidates,
+  compareConditions
 } = require('../js/core.js');
 
 const closeTo = (actual, expected, tolerance = 1e-12) => {
@@ -124,4 +125,87 @@ test('invalid core arguments are rejected instead of producing NaN', () => {
   assert.throws(() => softmax([1, Infinity], 1), /finite/);
   assert.throws(() => softmax([1, 0], 0), /Temperature/);
   assert.throws(() => analyzeCandidates([{ score: 1 }], 1), /At least 2/);
+});
+
+const namedCandidates = scores => scores.map((score, index) => ({
+  name: String.fromCharCode(65 + index), score
+}));
+
+test('comparison detects a concentration change while ranking stays fixed', () => {
+  const comparison = compareConditions(
+    namedCandidates([3, 2, 1]), 1,
+    namedCandidates([30, 20, 10]), 1
+  );
+  assert.equal(comparison.candidateSetSame, true);
+  assert.equal(comparison.rankingSame, true);
+  assert.equal(comparison.probabilitiesEquivalent, false);
+  assert.equal(comparison.outcome, 'sameRankingMoreConcentrated');
+  assert.ok(comparison.concentrationDelta > 0.7);
+  closeTo(comparison.leftEffectiveSpan, 2);
+  closeTo(comparison.rightEffectiveSpan, 20);
+});
+
+test('scaling scores and temperature together produces an equivalent distribution', () => {
+  const comparison = compareConditions(
+    namedCandidates([3, 2, 1]), 1,
+    namedCandidates([15, 10, 5]), 5
+  );
+  assert.equal(comparison.outcome, 'equivalentDistribution');
+  assert.equal(comparison.rankingSame, true);
+  assert.equal(comparison.probabilitiesEquivalent, true);
+  closeTo(comparison.maxProbabilityDelta, 0);
+  closeTo(comparison.concentrationDelta, 0);
+  closeTo(comparison.leftEffectiveSpan, comparison.rightEffectiveSpan);
+});
+
+test('comparison marks candidate-set changes as not directly comparable', () => {
+  const comparison = compareConditions(
+    namedCandidates([3, 2, 1]), 1,
+    namedCandidates([3, 2, 1, 2.5]), 1
+  );
+  assert.equal(comparison.candidateSetSame, false);
+  assert.equal(comparison.rankingSame, false);
+  assert.equal(comparison.probabilitiesEquivalent, false);
+  assert.equal(comparison.maxProbabilityDelta, null);
+  assert.equal(comparison.outcome, 'candidateSetChanged');
+});
+
+test('comparison matches the same named candidates even when input order differs', () => {
+  const comparison = compareConditions(
+    namedCandidates([3, 2, 1]), 1,
+    [
+      { name: 'C', score: 1 },
+      { name: 'A', score: 3 },
+      { name: 'B', score: 2 }
+    ], 1
+  );
+  assert.equal(comparison.candidateSetSame, true);
+  assert.equal(comparison.rankingSame, true);
+  assert.equal(comparison.probabilitiesEquivalent, true);
+  closeTo(comparison.maxProbabilityDelta, 0);
+  assert.equal(comparison.outcome, 'equivalentDistribution');
+});
+
+test('comparison treats reordered exact ties as the same ranking', () => {
+  const comparison = compareConditions(
+    [
+      { name: 'A', score: 2 },
+      { name: 'B', score: 2 },
+      { name: 'C', score: 1 }
+    ], 1,
+    [
+      { name: 'B', score: 2 },
+      { name: 'A', score: 2 },
+      { name: 'C', score: 1 }
+    ], 1
+  );
+  assert.equal(comparison.candidateSetSame, true);
+  assert.equal(comparison.rankingSame, true);
+  assert.equal(comparison.probabilitiesEquivalent, true);
+});
+
+test('comparison validates tolerance and both conditions through the core', () => {
+  assert.throws(() => compareConditions(namedCandidates([1, 0]), 1, namedCandidates([1, 0]), 1, 5, -1), /Tolerance/);
+  assert.throws(() => compareConditions(namedCandidates([1, 0]), 0, namedCandidates([1, 0]), 1), /Temperature/);
+  assert.throws(() => compareConditions([{ name: 'A', score: 1 }], 1, namedCandidates([1, 0]), 1), /At least 2/);
 });
