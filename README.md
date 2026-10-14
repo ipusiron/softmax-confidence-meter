@@ -5,17 +5,17 @@ slug: softmax-confidence-meter
 
 title: "Softmax Confidence Meter"
 
-subtitle_ja: "ソフトマックス自信度メーター"
-subtitle_en: "Probability Distribution Sharpness Meter"
+subtitle_ja: "softmax分布集中度メーター"
+subtitle_en: "Softmax Distribution Concentration Meter"
 
-description_ja: "softmaxによって得られた確率分布から「この結果を信じてよいか」を測定・可視化する教育・判断支援ツール"
-description_en: "An educational and decision-support tool that measures and visualizes whether you can trust the results from softmax probability distributions"
+description_ja: "スコアと温度によるsoftmax出力分布の変化を、集中度・エントロピー・上位差で観察する学習ツール"
+description_en: "A learning tool for observing how scores and temperature affect a softmax output distribution through concentration, entropy, and top-gap metrics"
 
 category_ja:
-  - 判断支援
+  - 学習支援
   - 分析・評価補助
 category_en:
-  - Decision Support
+  - Learning Support
   - Analysis Aid
 
 difficulty: 1
@@ -23,8 +23,8 @@ difficulty: 1
 tags:
   - softmax
   - entropy
-  - confidence
-  - probability
+  - probability-distribution
+  - calibration
   - visualization
 
 repo_url: "https://github.com/ipusiron/softmax-confidence-meter"
@@ -34,7 +34,7 @@ hub: true
 ---
 -->
 
-# Softmax Confidence Meter – ソフトマックス自信度メーター
+# Softmax Confidence Meter — softmax分布集中度メーター
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/ipusiron/softmax-confidence-meter?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/ipusiron/softmax-confidence-meter?style=social)
@@ -44,229 +44,195 @@ hub: true
 
 **Day111 - 生成AIで作るセキュリティツール200**
 
-**Softmax Confidence Meter** は、softmaxによって得られた確率分布から「この結果を信じてよいか」を測定・可視化する教育・判断支援ツールです。
+候補ごとのスコアをsoftmax分布へ変換し、温度による変化を観察するブラウザー完結型の学習ツールです。分布集中度、エントロピー、首位の割合、1位と2位の差を並べて表示します。
 
----
+> [!IMPORTANT]
+> ツール名に「Confidence」とありますが、表示するのは出力分布の**集中度**です。最大確率や集中度は、予測の正解率、モデルの信頼性、安全性を保証しません。
+
+[English README](README.en.md)
 
 ## 🌐 デモページ
 
-👉 **[https://ipusiron.github.io/softmax-confidence-meter/](https://ipusiron.github.io/softmax-confidence-meter/)**
+👉 [Softmax Confidence Meterを開く](https://ipusiron.github.io/softmax-confidence-meter/)
 
-ブラウザーで直接お試しいただけます。
-
----
+サーバーへの送信は行わず、入力と計算はブラウザー内で完結します。
 
 ## 📸 スクリーンショット
 
-> ![完全独走時の自信度](assets/screenshot.png)
->
-> *完全独走時の自信度*
+### 日本語表示
 
----
+![日本語で表示した分布集中度メーター](assets/screenshot.png)
+
+### English UI
+
+![Distribution concentration meter in English](assets/screenshot-en.png)
 
 ## ✨ 主な機能
 
-- softmax基礎の図解学習
-- 自信度（Confidence）のメーター表示
-- 分布の可視化
+- `候補名: スコア`形式を厳密に検証し、不正な行を行番号付きで表示
+- 最大スコアを引いてから指数関数を計算する、数値的に安定したsoftmax
+- 温度`T = 0.10〜5.00`による分布の変化を即時比較
+- 分布集中度、エントロピー、正規化エントロピー、首位割合、上位差を表示
+- 上位5件に加え、省略件数と残り確率の合計を表示し、全候補も展開可能
+- 基本・僅差・同点・極端な差の4種類の学習用サンプル
+- 日本語・英語の画面切り替えと、両言語で同じ内容の解説
+- キーボード操作、ARIAタブ、開閉可能な解説、ライブリージョンに対応
+- 320px幅から利用できるモバイル優先レイアウト
 
----
+## 🚀 使い方
 
-## 📖 Softmaxとは？（初学者向け）
+1. 「分布集中度メーター」タブを開きます。
+2. 1行に1候補ずつ、`候補名: スコア`を入力します。
+3. 必要に応じて温度スライダーを調整します。
+4. 「分布を計算」を押します。`Ctrl+Enter`、macOSでは`⌘+Enter`でも計算できます。
+5. 集中度だけで結論を出さず、首位割合、上位差、エントロピー、全候補の分布も確認します。
 
-**Softmax（ソフトマックス）** は、複数の候補に付けられた「スコア」を「確率」に変換する関数です。
+入力例：
 
-### なぜ必要？
-
-機械学習や統計処理では、各候補に「スコア」や「重み」が付くことがよくあります。
-
-```
-候補A: 3.5
-候補B: 2.1
-候補C: 0.8
-```
-
-しかしスコアのままでは：
-- 「3.5と2.1はどれくらい違うのか」が直感的にわからない
-- 合計値に意味がない
-
-Softmaxを通すと、**全候補の確率の合計が100%になる**形に変換されます：
-
-```
-候補A: 71.2%
-候補B: 22.1%
-候補C:  6.7%
+```text
+猫: 3.5
+犬: 2.1
+鳥: 0.8
 ```
 
-これにより「Aがもっとも有力で、Bも一定の可能性がある」と直感的に理解できます。
+温度`T = 1`での出力は、実装の計算で次の値になります。
 
-### 温度（Temperature）パラメーター
+| 候補 | softmax出力 |
+|---|---:|
+| 猫 | 76.1% |
+| 犬 | 18.8% |
+| 鳥 | 5.1% |
 
-Softmaxには「温度」というパラメーターがあり、分布の鋭さを調整できます。
+## 🧾 入力仕様
 
-| 温度 | 効果 | 分布の形 |
-|------|------|----------|
-| **低温**（< 1.0） | 差が強調される | 1位が独走（鋭い分布） |
-| **標準**（= 1.0） | そのまま変換 | バランスの取れた分布 |
-| **高温**（> 1.0） | 差が緩和される | 均等に近づく（平坦な分布） |
+- 候補数は2〜200件です。
+- 入力全体は20,000文字、候補名は1件100文字までです。
+- スコアは有限の10進数または指数表記です。例：`-2`、`.5`、`+1.2e-3`
+- `Infinity`、`-Infinity`、`NaN`、数値の後ろに文字が続く`1junk`、コロンが複数ある`A:1:2`は拒否します。
+- 候補名を省略して数値だけを入力した場合は、自動的に候補番号を表示します。
+- 空行は無視します。不正な非空行は黙って捨てず、すべてエラーとして示します。
 
-### よくある誤解
+## 🧮 計算方法
 
-| 誤解 | 正しい理解 |
-|------|------------|
-| 「確率80%なら正しい」 | Softmax出力は相対的な比率であり、絶対的な正解確率ではない |
-| 「1位を選べば安全」 | 2位との差が小さければ、どちらも同程度に妥当 |
-| 「スコアが高い＝確率が高い」 | 他の候補のスコア次第で確率は変わる（相対比較） |
+候補`i`のスコアを`z_i`、温度を`T`、最大スコアを`m`とすると、softmax出力`p_i`は次の式で計算します。
 
----
-
-## 🔄 softmaxの入出力
-
-| 項目 | 説明 |
-|------|------|
-| **入力** | 任意のスコア値（合計が1や100である必要なし） |
-| **出力** | 確率分布（必ず合計100%になる） |
-
-入力スコアの絶対値や合計値に制約はありません。softmaxは相対的な大小関係を確率分布に変換します。
-
----
-
-## 🔬 自信度の算出方法
-
-自信度は**正規化エントロピー**を用いて算出されます。
-
-```
-Confidence = (1 - H / log(N)) × 100 [%]
+```text
+p_i = exp((z_i - m) / T) / Σ_j exp((z_j - m) / T)
 ```
 
-- `H`: 確率分布のエントロピー（不確実性の指標）
-- `N`: 候補の数
-- `log(N)`: 最大エントロピー（全候補が均等な場合）
+最大スコアを先に引くことで、`exp(1000)`のようなオーバーフローを避けます。すべてのスコアに同じ有限値を加えても分布は変わりません。
 
-### 判定ラベル
+分布集中度`C`は、自然対数を使ったエントロピー`H(p)`と候補数`n`から求めます。
 
-| 自信度 | ラベル | 意味 |
-|--------|--------|------|
-| 70% 以上 | 自信あり | 1位候補が明確に突出している |
-| 40% 〜 70% | 判断が分かれる | 複数の候補が競合している |
-| 40% 未満 | 判断困難 | 分布がほぼ均等で決め手がない |
+```text
+H(p) = -Σ_i p_i log(p_i)
+C = 1 - H(p) / log(n)
+```
 
----
+- 全候補が均等なら`C = 0`です。
+- 1候補に確率が集中するほど`C`は1に近づきます。
+- スコアを同じ倍率で拡大すると、順位が同じでも分布は鋭くなります。
+- スコアと温度を同じ倍率で拡大すると、分布は変わりません。
+
+## ⚠️ 読み方と限界
+
+softmax出力は、与えられた候補間の相対的な重みです。最大値が90%でも、その候補が90%の確率で正しいとは限りません。大きなスコア差や小さな温度だけでも、最大値は100%近くになります。
+
+分布集中度は「分布がどれだけ尖っているか」を表します。次の内容は測定しません。
+
+- 予測が正しいか
+- モデルが確率校正されているか
+- 入力が学習分布の範囲内か
+- モデルや意思決定が安全か、公平か
+- 候補集合に正解が含まれているか
+
+信頼性を評価するには、正解ラベル付きの独立データを使い、精度、信頼度曲線、ECE、Brier scoreなど、目的に合う指標を別途確認してください。
 
 ## 🎯 活用例
 
-### 1. 古典暗号の解読支援
+### スコア尺度の違いを体験する
 
-シーザー暗号や換字式暗号の解読で、複数の復号候補が得られた場合に活用できます。
+`3, 2, 1`と`30, 20, 10`は順位が同じですが、同じ温度では後者の分布がはるかに集中します。順位だけでsoftmax出力が決まらないことを確認できます。
 
-**シナリオ**: 暗号文を頻度分析で解読し、各シフト量に対するスコアが得られた
+### 温度調整の教材にする
 
-```
-シフト3:4.2
-シフト7:2.1
-シフト11:1.8
-シフト19:0.9
-```
+同じスコアで温度だけを動かし、低温で分布が鋭く、高温で平らになる様子を比較できます。生成や分類に温度を使う場合の直感づくりに役立ちます。
 
-**判断**: 自信度が70%以上なら「シフト3で復号してよい」、40%未満なら「他の手法も併用すべき」と判断できます。
+### 上位候補だけを見る危険を確認する
 
----
+候補を6件以上入力し、上位5件の外側に残る確率質量を確認できます。表示上位だけで全体を代表させないための教材として使えます。
 
-### 2. 機械学習モデルの出力検証
+### 実装テストの期待値を作る
 
-分類モデルや推薦システムの出力を鵜呑みにせず、判断の確からしさを評価します。
-
-**シナリオ**: 画像分類モデルが出力したクラス別スコア
-
-```
-猫:3.8
-犬:3.5
-うさぎ:2.9
-鳥:1.2
-```
-
-**判断**: 「猫」と「犬」のスコアが近い場合、自信度は低くなります。1位だけを見て決め打ちせず、上位2つを人間が確認するワークフローを検討できます。
-
----
-
-### 3. LLMの出力選択支援
-
-LLM（大規模言語モデル）が複数の候補を生成した際、どの候補を採用すべきか判断します。
-
-**シナリオ**: LLMが生成した翻訳候補とその内部スコア
-
-```
-候補A（直訳）:2.8
-候補B（意訳）:2.6
-候補C（フォーマル）:2.4
-候補D（カジュアル）:1.5
-```
-
-**判断**: 上位3つが拮抗している場合（自信度40〜70%）、自動選択せずユーザーに選択肢を提示するUIが適切と判断できます。
-
----
+小規模な有限スコアを入力し、別のsoftmax実装と確率合計、順位、温度応答を比較できます。ただし、本ツール自体を暗号学的・統計学的な検証器として扱うことはできません。
 
 ## 🔗 関連ツール
 
-本ツールと関連する姉妹ツールを紹介します。
+- [Token Entropy Estimator](https://ipusiron.github.io/token-entropy-estimator/) — 文字列やトークン列のエントロピーを観察するツール。本ツールの候補分布のエントロピーとは対象が異なります。
+- [InfoQuantity Academy](https://ipusiron.github.io/infoquantity-academy/) — 情報量とエントロピーを図解で学ぶツール。
 
-### 🔐 Token Entropy Estimator
+## 🔐 セキュリティとプライバシー
 
-Softmax Confidence Meter では、候補スコアを softmax によって確率分布へ変換し、その分布の「尖り具合」から自信度を測定しています。この尖り具合は**エントロピー（不確実性）** としても解釈できます。
+- 外部ライブラリー、CDN、解析サービスを使用しません。
+- 入力値はネットワークへ送信せず、ブラウザー内だけで処理します。
+- 描画には`textContent`とDOM APIを使い、入力文字列をHTMLとして解釈しません。
+- Content Security Policyでスクリプト・スタイル・接続先を同一オリジンに制限しています。
+- 言語設定だけを`localStorage`に保存します。候補名やスコアは保存しません。
+- GitHub Pagesでは任意の応答ヘッダーを設定できないため、`X-Frame-Options`によるクリックジャッキング対策は提供していません。
 
-Token Entropy Estimator は、文字列やトークン列そのもののエントロピーを可視化するツールです。
+機密情報を扱うことを目的としたツールではありません。公開端末や共有端末では、機密性のある候補名やスコアを入力しないでください。
 
-> **本ツールとの違い**: 「結果の分布がどれだけはっきりしているか」を見る本ツールに対し、「入力データ自体がどれだけ秩序立っているか」を見るのが Token Entropy Estimator の役割です。
+## 🧪 ローカル実行とテスト
 
-- 📂 GitHub: [ipusiron/token-entropy-estimator](https://github.com/ipusiron/token-entropy-estimator)
-- 🚀 デモ: [https://ipusiron.github.io/token-entropy-estimator/](https://ipusiron.github.io/token-entropy-estimator/)
+ビルドや依存パッケージのインストールは不要です。`index.html`を直接開くか、任意の静的HTTPサーバーで配信できます。
 
-### 📐 InfoQuantity Academy
+Node.js 22以降で自動テストを実行します。
 
-Softmax Confidence Meter が扱っている「自信度」「分布の尖り」「判断のしやすさ」は、情報量やエントロピーといった**情報理論の考え方**と深く関係しています。
+```bash
+npm test
+```
 
-InfoQuantity Academy は、これらの概念を数式ではなく図解と直感で理解するための学習用ツールです。
-
-> **本ツールとの関係**: softmax の挙動や自信度の意味をもう一段深く理解したい場合に、理論的な背景を補完する役割を持っています。
-
-- 📂 GitHub: [ipusiron/infoquantity-academy](https://github.com/ipusiron/infoquantity-academy)
-- 🚀 デモ: [https://ipusiron.github.io/infoquantity-academy/](https://ipusiron.github.io/infoquantity-academy/)
-
----
+テストでは、厳密な入力解析、数値安定性、集中度、日英辞書、CSP・ARIA・安全なDOM描画、READMEの計算例を確認します。
 
 ## 📁 ディレクトリー構造
 
-```
+```text
 softmax-confidence-meter/
-├── index.html          # メインHTML
+├── .github/
+│   └── workflows/
+│       └── test.yml             # push・pull_request時のNode.jsテスト
+├── assets/
+│   ├── screenshot.png           # 日本語画面のスクリーンショット
+│   └── screenshot-en.png        # 英語画面のスクリーンショット
 ├── css/
-│   └── style.css       # スタイルシート
-├── js/
-│   └── main.js         # softmax計算・UI制御
+│   └── style.css                # モバイル優先の画面スタイル
 ├── docs/
-│   ├── SPEC.md         # 仕様書
-│   └── UI_SPEC.md      # UI仕様書
-├── assets/             # 画像リソース
-│   └── screenshot.png  # スクリーンショット
-├── .nojekyll           # Jekyll処理無効化
-├── CLAUDE.md           # Claude Code用ガイド
-├── LICENSE             # ライセンスファイル
-└── README.md           # 本ドキュメント
+│   ├── SPEC.md                  # 計算・入力・非目標の仕様
+│   └── UI_SPEC.md               # 画面とアクセシビリティの仕様
+├── js/
+│   ├── core.js                  # DOM非依存の入力解析・softmax・指標計算
+│   ├── i18n.js                  # 日英メッセージと表示言語設定
+│   └── main.js                  # タブ・入力・安全な結果描画
+├── scripts/
+│   └── browser-check.mjs        # Edgeを使うブラウザースモークテスト
+├── test/
+│   ├── core.test.js             # 計算コアの単体テスト
+│   ├── i18n.test.js             # 日英辞書の整合性テスト
+│   └── static.test.js           # HTML・JS・文書の回帰テスト
+├── .gitignore                   # Git除外設定
+├── .nojekyll                    # GitHub PagesのJekyll処理を無効化
+├── CLAUDE.md                    # 開発時のリポジトリールール
+├── LICENSE                      # MIT License
+├── README.en.md                 # 英語版README
+├── README.md                    # 日本語版README
+├── index.html                   # アプリケーション本体
+└── package.json                 # テストコマンドとNode.js要件
 ```
-
----
 
 ## 📄 ライセンス
 
-- ソースコードのライセンスは `LICENSE` ファイルを参照してください。
-
----
+MIT Licenseです。詳細は[LICENSE](LICENSE)を参照してください。
 
 ## 🛠️ このツールについて
 
-本ツールは、「生成AIで作るセキュリティツール200」プロジェクトの一環として開発されました。
-このプロジェクトでは、AIの支援を活用しながら、セキュリティに関連するさまざまなツールを200日間にわたり制作・公開していく取り組みを行っています。
-
-プロジェクトの詳細や他のツールについては、以下のページをご覧ください。
-
-🔗 [https://akademeia.info/?page_id=44607](https://akademeia.info/?page_id=44607)
+本ツールは「生成AIで作るセキュリティツール200」プロジェクトの一環として開発されています。プロジェクトの詳細と他のツールは、[生成AIで作るセキュリティツール200](https://akademeia.info/?page_id=44607)を参照してください。

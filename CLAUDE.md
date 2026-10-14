@@ -1,52 +1,49 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This repository contains Day111, Softmax Confidence Meter, a dependency-free static learning tool for GitHub Pages.
 
-## Project Overview
+## Product position
 
-Softmax Confidence Meter is an educational tool that visualizes softmax probability distributions to help users judge whether to trust ranked results. It displays a "confidence meter" based on normalized entropy rather than automatically deciding outcomes.
+- The computed value is **distribution concentration**, not prediction confidence, accuracy, calibration, or safety.
+- Never add trust labels or fixed thresholds such as “high confidence.”
+- Keep the limitation note equally clear in Japanese and English.
+- “Softmax Confidence Meter” is the product name only.
 
 ## Architecture
 
-- **Static web application** (HTML/CSS/JS) for GitHub Pages deployment
-- **No build system** - vanilla JavaScript, no bundler or transpilation
-- **File structure**:
-  - `index.html` - main entry point
-  - `css/` - stylesheets (dark/cyber theme)
-  - `js/` - JavaScript modules
-  - `assets/` - images and static resources
+- `js/core.js`: strict parser and DOM-independent numerical functions; classic-script and CommonJS compatible
+- `js/i18n.js`: complete Japanese/English dictionaries and optional language preference
+- `js/main.js`: tabs, disclosures, input state, and DOM rendering
+- `css/style.css`: mobile-first layout
+- `test/`: Node.js built-in test runner tests
+- `scripts/browser-check.mjs`: installed-Edge smoke check without package dependencies
 
-## Technical Specifications
+The application must continue to work when `index.html` is opened through `file://`. Do not convert the runtime to ES modules or add a bundler without an explicit requirement.
 
-### Softmax Implementation
-- Temperature-parameterized softmax: range 0.1–5.0, default 1.0
-- Confidence calculation using normalized entropy: `Confidence = (1 - H / log(N)) * 100`
+## Numerical rules
 
-### Confidence Thresholds
-- ≥70%: High confidence (自信あり)
-- 40–70%: Uncertain (判断が分かれる)
-- <40%: Low confidence (判断困難)
+- Accept 2–200 candidates and finite decimal/scientific scores only.
+- Use `exp((score - maxScore) / temperature)` for numerical stability.
+- Temperature must be finite and greater than zero; the UI range is 0.10–5.00.
+- Concentration is `1 - H(p) / log(n)` with natural logarithms.
+- Preserve source order for exact ties.
+- Report omitted count and tail probability whenever the top-five view omits candidates.
 
-## UI Requirements
+## Security and accessibility
 
-- Japanese language interface
-- Dark theme with cyber aesthetic
-- Diagram-first, minimal text approach
-- Three-tab structure:
-  1. **softmax基礎** - Accordion-style educational content with bar chart visualizations
-  2. **Confidence Meter** - Input form, temperature slider, meter display, top-5 probability bar graph
-  3. **関連ツール・発展** - Link cards to related resources
+- Never render user input with `innerHTML`, `insertAdjacentHTML`, or document-writing APIs.
+- Do not add inline scripts, inline styles, or inline event handlers; preserve the strict CSP.
+- Keep input and label length bounds.
+- Preserve ARIA tab keyboard controls, disclosure states, live/alert regions, and 44px controls.
+- Verify 320, 390, 600, and desktop widths and both languages after UI changes.
 
-## Development
+## Verification
 
-No build commands required. Open `index.html` directly in a browser or serve with any static file server:
+Requires Node.js 22 or later. No install step is needed.
 
 ```bash
-npx serve .
-# or
-python -m http.server 8000
+npm test
+node scripts/browser-check.mjs
 ```
 
-## Deployment
-
-Deployed to GitHub Pages. The `.nojekyll` file is present to disable Jekyll processing.
+Also run `node --check` for changed JavaScript and `git diff --check` before committing.
