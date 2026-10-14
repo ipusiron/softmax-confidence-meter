@@ -26,6 +26,7 @@
     <div class="tabs" role="tablist">
       <button id="tab-basics" class="tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="panel-basics" tabindex="0" data-tab="basics" data-i18n="tabBasics">softmaxの基本</button>
       <button id="tab-meter" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="panel-meter" tabindex="-1" data-tab="meter" data-i18n="tabMeter">分布集中度メーター</button>
+      <button id="tab-compare" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="panel-compare" tabindex="-1" data-tab="compare" data-i18n="tabCompare">2条件比較ラボ</button>
       <button id="tab-related" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="panel-related" tabindex="-1" data-tab="related" data-i18n="tabRelated">関連ツール・発展</button>
     </div>
   </nav>
@@ -161,6 +162,107 @@
           </div>
         </section>
       </div>
+    </section>
+
+    <section id="panel-compare" class="tab-panel" role="tabpanel" aria-labelledby="tab-compare" data-panel="compare" hidden>
+      <div class="section-heading">
+        <h2 data-i18n="compareHeading">2条件比較ラボ</h2>
+        <p data-i18n="compareLead">条件AとBを同じ計算で並べ、温度・スコア尺度・候補集合が分布へ与える影響を観察します。</p>
+      </div>
+      <p class="comparison-scope" data-i18n="compareScope">差は分布の変化を示すだけで、どちらの条件が正しい、優れている、安全であるとは判定しません。</p>
+
+      <fieldset class="comparison-presets">
+        <legend data-i18n="comparePresetsLabel">比較プリセット</legend>
+        <div class="comparison-preset-buttons">
+          <button class="secondary-button" type="button" data-comparison-preset="temperature" aria-pressed="true" data-i18n="comparePresetTemperature">温度だけ変更</button>
+          <button class="secondary-button" type="button" data-comparison-preset="scale" aria-pressed="false" data-i18n="comparePresetScale">尺度だけ10倍</button>
+          <button class="secondary-button" type="button" data-comparison-preset="equivalent" aria-pressed="false" data-i18n="comparePresetEquivalent">尺度と温度を同倍率</button>
+          <button class="secondary-button" type="button" data-comparison-preset="candidate" aria-pressed="false" data-i18n="comparePresetCandidate">候補を追加</button>
+        </div>
+      </fieldset>
+
+      <div class="comparison-input-grid">
+        <section class="card comparison-condition" aria-labelledby="compare-left-heading">
+          <h3 id="compare-left-heading" data-i18n="compareConditionA">条件A</h3>
+          <label for="compare-left-input" class="field-label" data-i18n="compareCandidatesLabel">候補とスコア</label>
+          <p id="compare-left-help" class="field-help" data-i18n="compareCandidatesHelp">2〜200候補。分布集中度メーターと同じ厳密形式です。</p>
+          <textarea id="compare-left-input" class="comparison-textarea" rows="6" maxlength="20000" aria-describedby="compare-left-help" spellcheck="false">A: 3
+B: 2
+C: 1</textarea>
+          <label for="compare-left-temperature" class="field-label" data-i18n="compareTemperatureLabel">温度 T</label>
+          <input id="compare-left-temperature" class="number-input" type="number" min="0.1" max="10" step="0.1" value="0.5" aria-describedby="compare-temperature-help">
+        </section>
+
+        <section class="card comparison-condition" aria-labelledby="compare-right-heading">
+          <h3 id="compare-right-heading" data-i18n="compareConditionB">条件B</h3>
+          <label for="compare-right-input" class="field-label" data-i18n="compareCandidatesLabel">候補とスコア</label>
+          <p id="compare-right-help" class="field-help" data-i18n="compareCandidatesHelp">2〜200候補。分布集中度メーターと同じ厳密形式です。</p>
+          <textarea id="compare-right-input" class="comparison-textarea" rows="6" maxlength="20000" aria-describedby="compare-right-help" spellcheck="false">A: 3
+B: 2
+C: 1</textarea>
+          <label for="compare-right-temperature" class="field-label" data-i18n="compareTemperatureLabel">温度 T</label>
+          <input id="compare-right-temperature" class="number-input" type="number" min="0.1" max="10" step="0.1" value="2" aria-describedby="compare-temperature-help">
+        </section>
+      </div>
+      <p id="compare-temperature-help" class="field-help comparison-temperature-help" data-i18n="compareTemperatureHelp">比較ラボでは0.1〜10.0の有限値を指定します。</p>
+      <div class="action-buttons comparison-actions">
+        <button id="compare-button" class="primary-button" type="button" data-i18n="compareButton">2条件を比較</button>
+        <button id="compare-reset-button" class="secondary-button" type="button" data-i18n="compareResetButton">温度プリセットに戻す</button>
+      </div>
+
+      <section id="compare-error-box" class="message-box error-box" role="alert" aria-labelledby="compare-errors-heading" hidden>
+        <h3 id="compare-errors-heading" data-i18n="compareErrorsHeading">比較条件を確認してください</h3>
+        <ul id="compare-error-list"></ul>
+      </section>
+
+      <section class="card comparison-result-card" aria-labelledby="compare-result-heading">
+        <h3 id="compare-result-heading" data-i18n="compareResultHeading">比較結果</h3>
+        <div id="compare-result-region" aria-live="polite" aria-atomic="false">
+          <p id="compare-result-empty" class="empty-state" data-i18n="compareResultEmpty">有効な2条件を比較すると、差の根拠がここに表示されます。</p>
+          <div id="compare-result-content" hidden>
+            <h4 data-i18n="comparisonFindingsHeading">確認できた差</h4>
+            <dl id="comparison-metrics" class="metrics-list comparison-metrics"></dl>
+            <div class="comparison-insight">
+              <strong id="comparison-outcome-title"></strong>
+              <p id="comparison-outcome-body"></p>
+            </div>
+
+            <div class="comparison-output-grid">
+              <section class="condition-output" aria-labelledby="left-output-heading">
+                <h4 id="left-output-heading" data-i18n="compareConditionAResult">条件Aの分布</h4>
+                <div class="condition-concentration">
+                  <span data-i18n="concentrationLabel">分布集中度</span>
+                  <strong id="left-concentration-value">0.0%</strong>
+                </div>
+                <progress id="left-concentration-progress" max="100" value="0">0%</progress>
+                <dl id="left-condition-metrics" class="condition-metrics"></dl>
+                <ol id="left-condition-candidates" class="candidate-list"></ol>
+                <p id="left-condition-tail" class="tail-summary"></p>
+                <details id="left-condition-full" class="full-results">
+                  <summary data-i18n="fullResultsSummary">全候補の結果を表示</summary>
+                  <ol id="left-condition-all" class="candidate-list candidate-list-full"></ol>
+                </details>
+              </section>
+
+              <section class="condition-output" aria-labelledby="right-output-heading">
+                <h4 id="right-output-heading" data-i18n="compareConditionBResult">条件Bの分布</h4>
+                <div class="condition-concentration">
+                  <span data-i18n="concentrationLabel">分布集中度</span>
+                  <strong id="right-concentration-value">0.0%</strong>
+                </div>
+                <progress id="right-concentration-progress" max="100" value="0">0%</progress>
+                <dl id="right-condition-metrics" class="condition-metrics"></dl>
+                <ol id="right-condition-candidates" class="candidate-list"></ol>
+                <p id="right-condition-tail" class="tail-summary"></p>
+                <details id="right-condition-full" class="full-results">
+                  <summary data-i18n="fullResultsSummary">全候補の結果を表示</summary>
+                  <ol id="right-condition-all" class="candidate-list candidate-list-full"></ol>
+                </details>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
     </section>
 
     <section id="panel-related" class="tab-panel" role="tabpanel" aria-labelledby="tab-related" data-panel="related" hidden>

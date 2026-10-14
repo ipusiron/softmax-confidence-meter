@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   DEFAULT_LANGUAGE,
@@ -22,6 +24,17 @@ test('every translated value is a non-empty string', () => {
       assert.equal(typeof value, 'string', `${language}.${key}`);
       assert.ok(value.trim().length > 0, `${language}.${key}`);
     }
+  }
+});
+
+test('every HTML translation key exists in both dictionaries', () => {
+  const html = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
+  const keys = [...html.matchAll(/data-i18n(?:-placeholder|-aria-label)?="([^"]+)"/g)]
+    .map(match => match[1]);
+  assert.ok(keys.length > 0);
+  for (const key of new Set(keys)) {
+    assert.equal(typeof messages.ja[key], 'string', `ja.${key}`);
+    assert.equal(typeof messages.en[key], 'string', `en.${key}`);
   }
 });
 

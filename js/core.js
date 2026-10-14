@@ -204,6 +204,89 @@
     };
   }
 
+  function candidateKeys(candidates) {
+    const occurrences = new Map();
+    return candidates.map((candidate, index) => {
+      const base = candidate.name === null || candidate.name === undefined
+        ? `auto:${index + 1}`
+        : `named:${candidate.name}`;
+      const occurrence = (occurrences.get(base) || 0) + 1;
+      occurrences.set(base, occurrence);
+      return `${base}#${occurrence}`;
+    });
+  }
+
+  function rankGroups(candidates, keys) {
+    const distinctScores = [...new Set(candidates.map(candidate => candidate.score))]
+      .sort((left, right) => right - left);
+    const groupByScore = new Map(distinctScores.map((score, index) => [score, index]));
+    return new Map(keys.map((key, index) => (
+      [key, groupByScore.get(candidates[index].score)]
+    )));
+  }
+
+  function compareConditions(
+    leftCandidates,
+    leftTemperature,
+    rightCandidates,
+    rightTemperature,
+    topLimit = DEFAULT_TOP_LIMIT,
+    tolerance = 1e-12
+  ) {
+    if (!Number.isFinite(tolerance) || tolerance < 0) {
+      throw new RangeError('Tolerance must be a finite non-negative number');
+    }
+
+    const left = analyzeCandidates(leftCandidates, leftTemperature, topLimit);
+    const right = analyzeCandidates(rightCandidates, rightTemperature, topLimit);
+    const leftKeys = candidateKeys(leftCandidates);
+    const rightKeys = candidateKeys(rightCandidates);
+    const leftSetKeys = [...leftKeys].sort();
+    const rightSetKeys = [...rightKeys].sort();
+    const candidateSetSame = leftKeys.length === rightKeys.length
+      && leftSetKeys.every((key, index) => key === rightSetKeys[index]);
+    const leftRanks = rankGroups(leftCandidates, leftKeys);
+    const rightRanks = rankGroups(rightCandidates, rightKeys);
+    const rankingSame = candidateSetSame
+      && leftKeys.every(key => leftRanks.get(key) === rightRanks.get(key));
+
+    let maxProbabilityDelta = null;
+    if (candidateSetSame) {
+      const rightProbabilityByKey = new Map(rightKeys.map((key, index) => (
+        [key, right.probabilities[index]]
+      )));
+      maxProbabilityDelta = leftKeys.reduce((maximum, key, index) => (
+        Math.max(maximum, Math.abs(rightProbabilityByKey.get(key) - left.probabilities[index]))
+      ), 0);
+    }
+
+    const probabilitiesEquivalent = candidateSetSame && maxProbabilityDelta <= tolerance;
+    const concentrationDelta = right.concentration - left.concentration;
+    let outcome;
+    if (!candidateSetSame) outcome = 'candidateSetChanged';
+    else if (probabilitiesEquivalent) outcome = 'equivalentDistribution';
+    else if (!rankingSame) outcome = 'rankingChanged';
+    else if (concentrationDelta > tolerance) outcome = 'sameRankingMoreConcentrated';
+    else if (concentrationDelta < -tolerance) outcome = 'sameRankingLessConcentrated';
+    else outcome = 'sameConcentrationDifferentDistribution';
+
+    return {
+      left,
+      right,
+      candidateSetSame,
+      rankingSame,
+      probabilitiesEquivalent,
+      maxProbabilityDelta,
+      concentrationDelta,
+      topShareDelta: right.topShare - left.topShare,
+      entropyDelta: right.entropy - left.entropy,
+      normalizedEntropyDelta: right.normalizedEntropy - left.normalizedEntropy,
+      leftEffectiveSpan: left.scoreSpan / left.temperature,
+      rightEffectiveSpan: right.scoreSpan / right.temperature,
+      outcome
+    };
+  }
+
   return Object.freeze({
     MIN_CANDIDATES,
     MAX_CANDIDATES,
@@ -213,6 +296,7 @@
     parseCandidateInput,
     softmax,
     entropy,
-    analyzeCandidates
+    analyzeCandidates,
+    compareConditions
   });
 }));

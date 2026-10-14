@@ -8,7 +8,7 @@
 
 **Day111 — Security Tools with Generative AI 200**
 
-A browser-only learning tool that converts candidate scores into a softmax distribution and shows how temperature changes its shape. It presents distribution concentration, entropy, top share, and the gap between the first and second candidates together.
+A browser-only learning tool that converts candidate scores into a softmax distribution and shows how temperature changes its shape. Alongside single-distribution metrics, it compares two conditions to expose the effects of temperature, score scale, and candidate-set changes.
 
 > [!IMPORTANT]
 > Although the product name contains “Confidence,” the displayed value measures **output-distribution concentration**. Neither the maximum probability nor concentration guarantees prediction accuracy, model reliability, or safety.
@@ -27,9 +27,13 @@ Input and calculations stay in the browser. The application does not send them t
 
 ![Distribution concentration meter in English](assets/screenshot-en.png)
 
+![Two-condition comparison lab in English](assets/screenshot-comparison-en.png)
+
 ### Japanese UI
 
 ![Distribution concentration meter in Japanese](assets/screenshot.png)
+
+![Two-condition comparison lab in Japanese](assets/screenshot-comparison.png)
 
 ## ✨ Features
 
@@ -37,6 +41,8 @@ Input and calculations stay in the browser. The application does not send them t
 - Uses numerically stable softmax by subtracting the maximum score before exponentiation
 - Compares distribution changes over temperature `T = 0.10–5.00`
 - Shows concentration, entropy, normalized entropy, top share, and top-to-second gap
+- Compares candidate sets, ranking, effective score span, concentration difference, and top-share difference side by side
+- Provides four comparison presets: temperature only, 10× score scale, equal score/temperature scaling, and candidate addition
 - Shows the top five, omitted count and tail mass, with an expandable list of every candidate
 - Provides four learning samples: basic, close scores, tied scores, and an extreme gap
 - Provides equivalent Japanese and English interfaces and explanations
@@ -50,6 +56,8 @@ Input and calculations stay in the browser. The application does not send them t
 3. Adjust the temperature slider if needed.
 4. Select “Calculate distribution.” You can also press `Ctrl+Enter`, or `⌘+Enter` on macOS.
 5. Do not draw a conclusion from concentration alone. Check the top share, top gap, entropy, and full distribution.
+
+To compare two conditions, open “Two-condition comparison lab.” Select a preset or enter candidates, scores, and a temperature from `0.1` through `10.0` for conditions A and B, then select “Compare conditions.” When candidate sets differ, the result is presented as redistribution caused by adding or removing candidates, not as a before-and-after comparison over the same candidates.
 
 Example input:
 
@@ -116,11 +124,19 @@ To assess reliability, use separate labeled data and metrics appropriate to the 
 
 ### Experience the effect of score scale
 
-`3, 2, 1` and `30, 20, 10` have the same ranking, but the latter is much more concentrated at the same temperature. This demonstrates that ranking alone does not determine softmax output.
+Use “Multiply scale by 10” in the comparison lab. `3, 2, 1` and `30, 20, 10` have the same ranking, but the latter is much more concentrated at the same temperature. The concentration difference and candidate shares demonstrate that ranking alone does not determine softmax output.
 
 ### Teach temperature adjustment
 
-Move temperature while keeping the scores fixed. The distribution becomes sharper at low temperature and flatter at high temperature, building intuition for temperature in generation and classification.
+Use “Change temperature only” to place the same scores at low and high temperatures side by side. The distribution becomes sharper at low temperature and flatter at high temperature, building intuition for temperature in generation and classification.
+
+### Verify score-scale and temperature equivalence
+
+Use “Scale scores and T equally” to compare conditions where both score gaps and temperature are multiplied by five. The resulting distributions match, showing that softmax responds to the ratio between score gaps and temperature.
+
+### Observe redistribution after adding a candidate
+
+Use “Add a candidate” to see every share change even though existing scores stay fixed. This demonstrates why a concentration difference across different candidate sets is not a simple increase or decrease over the same population.
 
 ### Inspect the risk of viewing only top candidates
 
@@ -156,7 +172,7 @@ Run the automated tests with Node.js 22 or later:
 npm test
 ```
 
-Tests cover strict parsing, numerical stability, concentration, bilingual message parity, CSP and ARIA structure, safe DOM rendering, and the README calculation example.
+Tests cover strict parsing, numerical stability, concentration, two-condition comparison, bilingual message parity, CSP and ARIA structure, safe DOM rendering, and the README calculation example. `npm run browser:test` uses an installed Microsoft Edge to verify HTTP and `file://`, four viewport widths, both languages, comparison presets, and XSS-safe rendering, then refreshes the screenshots.
 
 ## 📁 Directory structure
 
@@ -167,16 +183,18 @@ softmax-confidence-meter/
 │       └── test.yml             # Node.js tests on push and pull requests
 ├── assets/
 │   ├── screenshot.png           # Japanese UI screenshot
-│   └── screenshot-en.png        # English UI screenshot
+│   ├── screenshot-en.png        # English UI screenshot
+│   ├── screenshot-comparison.png     # Japanese comparison lab
+│   └── screenshot-comparison-en.png  # English comparison lab
 ├── css/
 │   └── style.css                # Mobile-first UI styles
 ├── docs/
 │   ├── SPEC.md                  # Calculation, input, and non-goal specification
 │   └── UI_SPEC.md               # UI and accessibility specification
 ├── js/
-│   ├── core.js                  # DOM-independent parser and calculations
+│   ├── core.js                  # DOM-independent parser, softmax, and comparison logic
 │   ├── i18n.js                  # Japanese/English messages and preference
-│   └── main.js                  # Tabs, input handling, and safe rendering
+│   └── main.js                  # Tabs, single analysis, comparison, and safe rendering
 ├── scripts/
 │   └── browser-check.mjs        # Browser smoke test using Edge
 ├── test/

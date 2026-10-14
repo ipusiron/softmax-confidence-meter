@@ -21,13 +21,17 @@ test('HTML has a strict local-only CSP and no inline executable content', () => 
 
 test('HTML exposes the required accessible tab, disclosure, form, and live-region structure', () => {
   const html = read('index.html');
-  assert.equal((html.match(/role="tab"/g) || []).length, 3);
-  assert.equal((html.match(/role="tabpanel"/g) || []).length, 3);
+  assert.equal((html.match(/role="tab"/g) || []).length, 4);
+  assert.equal((html.match(/role="tabpanel"/g) || []).length, 4);
   assert.equal((html.match(/class="accordion-button"/g) || []).length, 4);
   assert.equal((html.match(/aria-expanded=/g) || []).length, 4);
-  assert.match(html, /role="alert"/);
-  assert.match(html, /aria-live="polite"/);
+  assert.equal((html.match(/role="alert"/g) || []).length, 2);
+  assert.equal((html.match(/aria-live="polite"/g) || []).length, 2);
   assert.match(html, /<label[^>]+for="candidate-input"/);
+  assert.match(html, /<label[^>]+for="compare-left-input"/);
+  assert.match(html, /<label[^>]+for="compare-right-input"/);
+  assert.equal((html.match(/data-comparison-preset=/g) || []).length, 4);
+  assert.equal((html.match(/aria-pressed=/g) || []).length, 4);
   assert.match(html, /maxlength="20000"/);
   assert.match(html, /<progress/);
   assert.ok(html.indexOf('js/core.js') < html.indexOf('js/i18n.js'));
@@ -55,6 +59,15 @@ test('runtime renders through DOM APIs without HTML sinks or dynamic style attri
   assert.doesNotMatch(source, /\.style\.|setAttribute\(['"]style/);
   assert.match(source, /textContent/);
   assert.match(source, /createElement/);
+  assert.match(source, /core\.compareConditions/);
+});
+
+test('comparison lab names its limits and avoids correctness or safety claims', () => {
+  const ja = read('js/i18n.js');
+  assert.match(ja, /差は分布の変化を示すだけ/);
+  assert.match(ja, /正しい、優れている、安全であるとは判定しません/);
+  assert.match(ja, /Differences show only a change in distribution/);
+  assert.match(ja, /do not establish that either condition is correct, better, or safer/);
 });
 
 test('README files agree on exact example values, limitations, and relative links', () => {

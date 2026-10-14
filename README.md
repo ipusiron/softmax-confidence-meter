@@ -8,8 +8,8 @@ title: "Softmax Confidence Meter"
 subtitle_ja: "softmax分布集中度メーター"
 subtitle_en: "Softmax Distribution Concentration Meter"
 
-description_ja: "スコアと温度によるsoftmax出力分布の変化を、集中度・エントロピー・上位差で観察する学習ツール"
-description_en: "A learning tool for observing how scores and temperature affect a softmax output distribution through concentration, entropy, and top-gap metrics"
+description_ja: "スコアと温度によるsoftmax出力分布の変化を、集中度・エントロピー・2条件比較で観察する学習ツール"
+description_en: "A learning tool for observing how scores and temperature affect a softmax output distribution through concentration, entropy, and side-by-side comparison"
 
 category_ja:
   - 学習支援
@@ -44,7 +44,7 @@ hub: true
 
 **Day111 - 生成AIで作るセキュリティツール200**
 
-候補ごとのスコアをsoftmax分布へ変換し、温度による変化を観察するブラウザー完結型の学習ツールです。分布集中度、エントロピー、首位の割合、1位と2位の差を並べて表示します。
+候補ごとのスコアをsoftmax分布へ変換し、温度による変化を観察するブラウザー完結型の学習ツールです。単独の分布指標に加え、2条件を並べて温度・スコア尺度・候補集合による違いを比較できます。
 
 > [!IMPORTANT]
 > ツール名に「Confidence」とありますが、表示するのは出力分布の**集中度**です。最大確率や集中度は、予測の正解率、モデルの信頼性、安全性を保証しません。
@@ -63,9 +63,13 @@ hub: true
 
 ![日本語で表示した分布集中度メーター](assets/screenshot.png)
 
+![日本語で表示した2条件比較ラボ](assets/screenshot-comparison.png)
+
 ### English UI
 
 ![Distribution concentration meter in English](assets/screenshot-en.png)
+
+![Two-condition comparison lab in English](assets/screenshot-comparison-en.png)
 
 ## ✨ 主な機能
 
@@ -73,6 +77,8 @@ hub: true
 - 最大スコアを引いてから指数関数を計算する、数値的に安定したsoftmax
 - 温度`T = 0.10〜5.00`による分布の変化を即時比較
 - 分布集中度、エントロピー、正規化エントロピー、首位割合、上位差を表示
+- 2条件比較ラボで、候補集合・順位・実効スコア幅・集中度差・首位割合差を並べて表示
+- 「温度だけ変更」「尺度だけ10倍」「尺度と温度を同倍率」「候補を追加」の4プリセット
 - 上位5件に加え、省略件数と残り確率の合計を表示し、全候補も展開可能
 - 基本・僅差・同点・極端な差の4種類の学習用サンプル
 - 日本語・英語の画面切り替えと、両言語で同じ内容の解説
@@ -86,6 +92,8 @@ hub: true
 3. 必要に応じて温度スライダーを調整します。
 4. 「分布を計算」を押します。`Ctrl+Enter`、macOSでは`⌘+Enter`でも計算できます。
 5. 集中度だけで結論を出さず、首位割合、上位差、エントロピー、全候補の分布も確認します。
+
+2つの条件を比べる場合は「2条件比較ラボ」タブを開きます。プリセットを選ぶか、条件A・Bへ候補とスコア、`0.1〜10.0`の温度を入力して「2条件を比較」を押してください。候補集合が異なる場合は、同じ候補の前後比較として扱わず、候補の追加・削除による全体の再配分として示します。
 
 入力例：
 
@@ -152,11 +160,19 @@ softmax出力は、与えられた候補間の相対的な重みです。最大�
 
 ### スコア尺度の違いを体験する
 
-`3, 2, 1`と`30, 20, 10`は順位が同じですが、同じ温度では後者の分布がはるかに集中します。順位だけでsoftmax出力が決まらないことを確認できます。
+2条件比較ラボの「尺度だけ10倍」を使います。`3, 2, 1`と`30, 20, 10`は順位が同じですが、同じ温度では後者の分布がはるかに集中します。順位だけでsoftmax出力が決まらないことを、集中度差と候補別の割合で確認できます。
 
 ### 温度調整の教材にする
 
-同じスコアで温度だけを動かし、低温で分布が鋭く、高温で平らになる様子を比較できます。生成や分類に温度を使う場合の直感づくりに役立ちます。
+「温度だけ変更」を使い、同じスコアを低温と高温で並べます。低温で分布が鋭く、高温で平らになる様子を比較でき、生成や分類に温度を使う場合の直感づくりに役立ちます。
+
+### スコア尺度と温度の同値性を確かめる
+
+「尺度と温度を同倍率」を使うと、スコア差を5倍にしながら温度も5倍にした2条件が同じ分布になります。softmaxがスコア差と温度の比に反応することを確認できます。
+
+### 候補追加による再配分を観察する
+
+「候補を追加」を使うと、既存候補のスコアを変えなくても全候補の割合が変わります。候補集合が違う結果の集中度差を、同じ母集団の単純な増減として解釈できないことを学べます。
 
 ### 上位候補だけを見る危険を確認する
 
@@ -192,7 +208,7 @@ Node.js 22以降で自動テストを実行します。
 npm test
 ```
 
-テストでは、厳密な入力解析、数値安定性、集中度、日英辞書、CSP・ARIA・安全なDOM描画、READMEの計算例を確認します。
+テストでは、厳密な入力解析、数値安定性、集中度、2条件比較、日英辞書、CSP・ARIA・安全なDOM描画、READMEの計算例を確認します。`npm run browser:test`では、インストール済みのMicrosoft Edgeを使ってHTTPと`file://`、4画面幅、日英切り替え、比較プリセット、XSS耐性を確認し、スクリーンショットを更新します。
 
 ## 📁 ディレクトリー構造
 
@@ -203,16 +219,18 @@ softmax-confidence-meter/
 │       └── test.yml             # push・pull_request時のNode.jsテスト
 ├── assets/
 │   ├── screenshot.png           # 日本語画面のスクリーンショット
-│   └── screenshot-en.png        # 英語画面のスクリーンショット
+│   ├── screenshot-en.png        # 英語画面のスクリーンショット
+│   ├── screenshot-comparison.png     # 日本語の比較ラボ
+│   └── screenshot-comparison-en.png  # 英語の比較ラボ
 ├── css/
 │   └── style.css                # モバイル優先の画面スタイル
 ├── docs/
 │   ├── SPEC.md                  # 計算・入力・非目標の仕様
 │   └── UI_SPEC.md               # 画面とアクセシビリティの仕様
 ├── js/
-│   ├── core.js                  # DOM非依存の入力解析・softmax・指標計算
+│   ├── core.js                  # DOM非依存の入力解析・softmax・比較計算
 │   ├── i18n.js                  # 日英メッセージと表示言語設定
-│   └── main.js                  # タブ・入力・安全な結果描画
+│   └── main.js                  # タブ・単体分析・2条件比較・安全な結果描画
 ├── scripts/
 │   └── browser-check.mjs        # Edgeを使うブラウザースモークテスト
 ├── test/

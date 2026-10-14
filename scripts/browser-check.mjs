@@ -205,6 +205,17 @@ try {
   assert(await client.evaluate('document.getElementById("top-candidates").children.length === 3'), 'The sample must display three candidates.');
   await capture(client, 'assets/screenshot.png');
 
+  await client.evaluate('document.querySelector("[data-tab=compare]").click(); document.querySelector("[data-comparison-preset=scale]").click();');
+  assert(await client.evaluate('!document.getElementById("compare-result-content").hidden'), 'The comparison preset must produce a result.');
+  assert(await client.evaluate('document.getElementById("comparison-outcome-title").textContent.includes("より集中")'), 'The scale preset must explain greater concentration.');
+  await client.evaluate('document.getElementById("compare-result-heading").scrollIntoView();');
+  await capture(client, 'assets/screenshot-comparison.png');
+  await client.evaluate('scrollTo(0, 0);');
+  await client.evaluate('document.querySelector("[data-comparison-preset=equivalent]").click();');
+  assert(await client.evaluate('document.getElementById("comparison-outcome-title").textContent.includes("同じ")'), 'The equivalent preset must explain the identical distribution.');
+  await client.evaluate('document.querySelector("[data-comparison-preset=candidate]").click();');
+  assert(await client.evaluate('document.getElementById("comparison-outcome-title").textContent.includes("再配分")'), 'The candidate preset must explain redistribution.');
+
   for (const width of [320, 390, 600, 1280]) {
     await setViewport(client, width, 920);
     const layout = await client.evaluate(`(() => {
@@ -221,7 +232,21 @@ try {
   await setViewport(client, 1100, 820);
   await client.evaluate('document.getElementById("language-toggle").click();');
   assert(await client.evaluate('document.documentElement.lang === "en"'), 'The language button must switch to English.');
-  assert(await client.evaluate('document.getElementById("result-heading").textContent === "Analysis result"'), 'Dynamic result labels must switch to English.');
+  assert(await client.evaluate('document.getElementById("compare-result-heading").textContent === "Comparison result"'), 'Comparison labels must switch to English.');
+  assert(await client.evaluate('document.getElementById("comparison-outcome-title").textContent.includes("redistributes")'), 'Dynamic comparison guidance must switch to English.');
+  await client.evaluate('document.querySelector("[data-comparison-preset=scale]").click(); document.getElementById("compare-result-heading").scrollIntoView();');
+  await capture(client, 'assets/screenshot-comparison-en.png');
+  await client.evaluate('scrollTo(0, 0);');
+  for (const width of [320, 390]) {
+    await setViewport(client, width, 920);
+    assert(
+      await client.evaluate('document.documentElement.scrollWidth <= document.documentElement.clientWidth'),
+      `English comparison view must not overflow at ${width}px.`
+    );
+  }
+  await setViewport(client, 1100, 820);
+  await client.evaluate('document.querySelector("[data-tab=meter]").click();');
+  assert(await client.evaluate('document.getElementById("result-heading").textContent === "Analysis result"'), 'Meter labels must switch to English.');
   await capture(client, 'assets/screenshot-en.png');
 
   await client.evaluate(`(() => {
@@ -233,15 +258,27 @@ try {
   assert(await client.evaluate('globalThis.__xss === undefined'), 'Candidate text must not execute.');
   assert(await client.evaluate('document.querySelectorAll("#result-content img").length === 0'), 'Candidate text must not create HTML.');
 
+  await client.evaluate(`(() => {
+    document.querySelector('[data-tab=compare]').click();
+    const input = document.getElementById('compare-left-input');
+    input.value = '<svg onload=globalThis.__compareXss=1>: 1\\nSafe: 0';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('compare-button').click();
+  })()`);
+  assert(await client.evaluate('globalThis.__compareXss === undefined'), 'Comparison candidate text must not execute.');
+  assert(await client.evaluate('document.querySelectorAll("#compare-result-content svg").length === 0'), 'Comparison candidate text must not create HTML.');
+
   await setViewport(client, 390, 800);
   await navigate(client, pathToFileURL(path.join(root, 'index.html')).href);
   assert(await client.evaluate('Boolean(window.SoftmaxCore && window.SoftmaxI18n)'), 'Classic scripts must load through file://.');
   await client.evaluate('document.querySelector("[data-tab=meter]").click(); document.querySelector("[data-sample=close]").click();');
   assert(await client.evaluate('!document.getElementById("result-content").hidden'), 'file:// sample calculation must work.');
+  await client.evaluate('document.querySelector("[data-tab=compare]").click(); document.querySelector("[data-comparison-preset=temperature]").click();');
+  assert(await client.evaluate('!document.getElementById("compare-result-content").hidden'), 'file:// comparison must work.');
   assert(await client.evaluate('document.documentElement.scrollWidth <= document.documentElement.clientWidth'), 'file:// mobile view must not overflow.');
 
   assert(client.errors.length === 0, `Browser errors: ${client.errors.join(' | ')}`);
-  process.stdout.write('Browser checks passed: HTTP + file://, JA/EN, 320/390/600/1280px, XSS-safe rendering, screenshots.\n');
+  process.stdout.write('Browser checks passed: HTTP + file://, meter + comparison presets, JA/EN, 320/390/600/1280px, XSS-safe rendering, screenshots.\n');
 } finally {
   if (client) client.close();
   browser.kill();
