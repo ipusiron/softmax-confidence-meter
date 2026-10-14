@@ -1,0 +1,14 @@
+{
+  "name": "softmax-confidence-meter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dependency-free tests for Softmax Confidence Meter",
+  "scripts": {
+    "test": "node --test",
+    "browser:test": "node scripts/browser-check.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
