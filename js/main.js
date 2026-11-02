@@ -18,6 +18,7 @@
     clearButton: document.getElementById('clear-button'),
     errorBox: document.getElementById('error-box'),
     errorList: document.getElementById('error-list'),
+    resultStatus: document.getElementById('result-status'),
     resultEmpty: document.getElementById('result-empty'),
     resultContent: document.getElementById('result-content'),
     concentrationValue: document.getElementById('concentration-value'),
@@ -357,6 +358,27 @@
     elements.resultContent.hidden = false;
   }
 
+  // The result card is not a live region, so the slider can redraw it on every input.
+  // One summary sentence goes to the live status at a boundary (calculate, change, language).
+  function announceResult() {
+    const analysis = state.lastAnalysis;
+    const text = analysis && state.resultIsCurrent
+      ? t('resultAnnouncement', {
+        temperature: analysis.temperature.toFixed(2),
+        concentration: formatPercent(analysis.concentration),
+        topShare: formatPercent(analysis.topShare),
+        count: analysis.candidateCount
+      })
+      : '';
+    core.writeLiveText(elements.resultStatus, text);
+  }
+
+  function updateTemperatureDisplay() {
+    const formatted = Number(elements.temperature.value).toFixed(2);
+    elements.temperatureOutput.value = formatted;
+    elements.temperature.setAttribute('aria-valuetext', formatted);
+  }
+
   function markComparisonPreset(presetName) {
     elements.comparisonPresetButtons.forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.comparisonPreset === presetName));
@@ -543,9 +565,10 @@
     state.lastErrors = [];
     renderErrors();
     renderResult();
+    announceResult();
   }
 
-  function calculate() {
+  function computeResult() {
     const parsed = core.parseCandidateInput(elements.input.value);
     state.lastErrors = parsed.errors;
     state.lastAnalysis = null;
@@ -568,6 +591,11 @@
     renderResult();
   }
 
+  function calculate() {
+    computeResult();
+    announceResult();
+  }
+
   function loadSample(sampleName) {
     state.lastSample = sampleName;
     elements.input.value = sampleData[state.language][sampleName];
@@ -581,8 +609,9 @@
     applyStaticTranslations();
     renderDemos();
     renderErrors();
-    if (state.lastSample && state.resultIsCurrent) calculate();
+    if (state.lastSample && state.resultIsCurrent) computeResult();
     else renderResult();
+    announceResult();
     renderComparisonErrors();
     renderComparisonResult();
   }
@@ -618,9 +647,15 @@
       calculate();
     }
   });
+  // While dragging, update only the visible result and the slider's aria-valuetext.
   elements.temperature.addEventListener('input', () => {
-    elements.temperatureOutput.value = Number(elements.temperature.value).toFixed(2);
-    if (state.resultIsCurrent) calculate();
+    updateTemperatureDisplay();
+    if (state.resultIsCurrent) computeResult();
+  });
+  elements.temperature.addEventListener('change', () => {
+    updateTemperatureDisplay();
+    if (state.resultIsCurrent) computeResult();
+    announceResult();
   });
   [
     elements.compareLeftInput,
@@ -637,7 +672,7 @@
   elements.compareButton.addEventListener('click', calculateComparison);
   elements.compareResetButton.addEventListener('click', () => loadComparisonPreset('temperature'));
 
-  elements.temperatureOutput.value = Number(elements.temperature.value).toFixed(2);
+  updateTemperatureDisplay();
   applyStaticTranslations();
   selectTab(state.activeTab);
   renderDemos();

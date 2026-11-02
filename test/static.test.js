@@ -100,6 +100,19 @@ test('mobile-first CSS includes required expansion points and no viewport-clippi
   assert.match(css, /prefers-reduced-motion/);
 });
 
+test('temperature slider redraws outside the live region and announces once at change', () => {
+  const html = read('index.html');
+  assert.match(html, /<p id="result-status"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
+  assert.match(html, /<div id="result-region">/);
+  const source = read('js/main.js');
+  const inputHandler = source.match(/temperature\.addEventListener\('input', \(\) => \{([\s\S]*?)\n  \}\);/);
+  assert.ok(inputHandler, 'temperature input handler');
+  assert.doesNotMatch(inputHandler[1], /announceResult|calculate\(\)/);
+  assert.match(source, /temperature\.addEventListener\('change'/);
+  assert.match(source, /setAttribute\('aria-valuetext'/);
+  assert.match(source, /core\.writeLiveText\(elements\.resultStatus/);
+});
+
 function exists(relativePath) {
   return fs.existsSync(path.join(root, relativePath));
 }

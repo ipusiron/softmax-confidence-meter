@@ -136,7 +136,8 @@
 
         <section class="card result-card" aria-labelledby="result-heading">
           <h3 id="result-heading" data-i18n="resultHeading">分析結果</h3>
-          <div id="result-region" aria-live="polite" aria-atomic="false">
+          <p id="result-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div id="result-region">
             <p id="result-empty" class="empty-state" data-i18n="resultEmpty">有効な入力で計算すると、ここに分布と指標が表示されます。</p>
             <div id="result-content" hidden>
               <div class="concentration-block">
