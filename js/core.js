@@ -225,6 +225,19 @@
     )));
   }
 
+  /**
+   * Writes text to a live-region node only when it differs from the current text,
+   * so screen readers are not handed repeated identical announcements.
+   * Works with any object that has a textContent property.
+   */
+  function writeLiveText(node, text) {
+    if (!node) return false;
+    const next = String(text ?? '');
+    if (node.textContent === next) return false;
+    node.textContent = next;
+    return true;
+  }
+
   function compareConditions(
     leftCandidates,
     leftTemperature,
@@ -297,6 +310,7 @@
     softmax,
     entropy,
     analyzeCandidates,
-    compareConditions
+    compareConditions,
+    writeLiveText
   });
 }));

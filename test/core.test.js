@@ -8,7 +8,8 @@ const {
   softmax,
   entropy,
   analyzeCandidates,
-  compareConditions
+  compareConditions,
+  writeLiveText
 } = require('../js/core.js');
 
 const closeTo = (actual, expected, tolerance = 1e-12) => {
@@ -208,4 +209,22 @@ test('comparison validates tolerance and both conditions through the core', () =
   assert.throws(() => compareConditions(namedCandidates([1, 0]), 1, namedCandidates([1, 0]), 1, 5, -1), /Tolerance/);
   assert.throws(() => compareConditions(namedCandidates([1, 0]), 0, namedCandidates([1, 0]), 1), /Temperature/);
   assert.throws(() => compareConditions([{ name: 'A', score: 1 }], 1, namedCandidates([1, 0]), 1), /At least 2/);
+});
+
+test('live-text helper writes only when the sentence changes', () => {
+  let writes = 0;
+  let text = '';
+  const node = {
+    get textContent() { return text; },
+    set textContent(value) { writes += 1; text = value; }
+  };
+  assert.equal(writeLiveText(node, 'A'), true);
+  assert.equal(writeLiveText(node, 'A'), false);
+  assert.equal(writes, 1);
+  assert.equal(writeLiveText(node, 'B'), true);
+  assert.equal(writeLiveText(node, ''), true);
+  assert.equal(writeLiveText(node, null), false);
+  assert.equal(text, '');
+  assert.equal(writes, 3);
+  assert.equal(writeLiveText(null, 'A'), false);
 });
