@@ -18,7 +18,7 @@ category_en:
   - Learning Support
   - Analysis Aid
 
-difficulty: 1
+difficulty: 2
 
 tags:
   - softmax
